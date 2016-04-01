@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Connection {
-  public String database = "eunoia" ;
+  public String database = "euonia" ;
   public String username = "" ;
   public String password = "";
   public String[] hosts = { "127.0.0.1" } ;
@@ -36,11 +36,14 @@ public class Connection {
     }
   }
 
+  public void close() {
+    this.client.close();
+  }
+
 
   public String getConnectionString() {
     return  getType() + getUsername() + ":" + getPassword() + "@" + getHostString() + ":" + getPort() + "/" + getDatabase() ;
   }
-
 
 // simply gets back a list of ServerAddress to create a new mongo connection, this is obtained from the hosts array
 public List<ServerAddress> getServerList() {

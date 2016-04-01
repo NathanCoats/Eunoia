@@ -1,7 +1,10 @@
 // base inserts
 import java.util.List;
 import java.util.Random;
+
+import org.bson.types.ObjectId;
 import com.mongodb.BasicDBObject;
+import com.mongodb.DBObject;
 import com.mongodb.WriteResult;
 
 
@@ -10,17 +13,39 @@ public class Node {
   public String id;
   public String name;
   public String url;
-  public double value;
+  public double rank;
 
   public Node() {
     this.id    = "";
-    this.value = 0D;
+    this.rank = 1D;
     this.url   = "";
     this.name  = "";
   }
 
+  public Node(String id, boolean load) {
+    if(load) {
+      Connection connection = new Connection( "nodes" );
+      try {
+        BasicDBObject search = new BasicDBObject("_id", new ObjectId(id) );
+        DBObject result = connection.col.findOne(search);
+
+        this.id = result.get("_id").toString();
+        this.url = result.get("url").toString();
+        this.rank = Double.parseDouble( result.get("rank").toString() );
+        this.name = result.get("name").toString();
+
+      }
+      catch(Exception e) {
+        e.printStackTrace();
+      }
+      finally{
+        connection.close();
+      }
+    }
+  }
+
   public Node(String url) {
-    this.value = 0D;
+    this.rank = 1D;
     setUrl(url);
     this.name  = "";
     this.save();
@@ -49,12 +74,33 @@ public class Node {
   public void save() {
 
     Connection connection = new Connection( "nodes" );
-    BasicDBObject obj = new BasicDBObject( "name" , "" ).append("url",url).append("value",0D);
-    WriteResult result = connection.col.insert(obj);
-    id = result.getUpsertedId().toString();
-    System.out.println(id);
+
+    BasicDBObject obj = new BasicDBObject( "name" , "" ).append("url",url).append("rank",rank);
+    BasicDBObject search = new BasicDBObject("url", url);
+
+    try {
+
+      connection.col.update(search, obj, true, false);
+    }
+    catch(NullPointerException e) {
+      e.printStackTrace();
+    }
+    finally {
+      this.id = connection.col.findOne(search).get("_id").toString();
+      connection.close();
+    }
+
   }
 
+  public double addPoints(double points) {
+    rank += points;
+    return rank;
+  }
+
+  public double minusPoints(double points) {
+    rank -= points;
+    return rank;
+  }
 
 	/**
 	* Returns value of id
@@ -116,15 +162,16 @@ public class Node {
 	* Returns value of value
 	* @return
 	*/
-	public double getValue() {
-		return value;
+	public double getRank() {
+		return rank;
 	}
 
 	/**
 	* Sets new value of value
 	* @param
 	*/
-	public void setValue(double value) {
-		this.value = value;
+	public void setRank(double rank) {
+		this.rank = rank;
+    this.save();
 	}
 }
