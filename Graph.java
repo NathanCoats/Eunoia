@@ -10,9 +10,8 @@ public class Graph {
   public List<Edge> edges = new ArrayList<Edge>();
   public double damping_factor = .85;
 
-  public Graph() {}
-
-  public Graph( List<Edge> edges ) {
+  public Graph() {
+    List<Edge> edges = Edge.allEdges();
     this.edges = new ArrayList<Edge>();
     Edge current;
     Iterator<Edge> it = edges.iterator();
@@ -26,43 +25,51 @@ public class Graph {
 
   }
 
+  // public void run() {
+  //   t = new Thread(this);
+  //   t.start();
+  // }
+
+
   public void updateRank() {
     Iterator<Edge> it = edges.iterator();
     Edge current;
+    Node end = null;
+    Node start = null;
+
+    // goes through each edge in the graph
     while( it.hasNext() ) {
       current = it.next();
 
-      Node start = current.getStart();
-      Node end = current.getEnd();
+      //gets the start node so it can calculate the new_rank to append to the current rank
+      start = current.getStart();
 
+      //uses the start node of the edge to get its current rank, and the amount of pages it links to so the correct modification can be calculated
       double new_rank = calculateAmount( start );
-      start.setRank(new_rank);
+
+      // updates the end node to its new rank.
+      end = current.getEnd();
+      end.updateRank(new_rank);
     }
   }
 
   public double calculateAmount(Node start) {
     double rank_sums = 0;
-    Integer amount    = 0;
     Node end;
     Connection connection = new Connection( "edges" );
+
+    //finds all documents where the start id = node
     BasicDBObject search = new BasicDBObject( "start" , start.getId() );
     DBCursor cursor = connection.col.find(search);
-    Edge current;
 
-    amount = cursor.size();
-
-    while( cursor.hasNext() ) {
-      DBObject obj = cursor.next();
-      end = new Node( obj.get("end").toString() , true );
-
-      //current = new Edge( start, end );
-      rank_sums += end.getRank();
-    }
+    // the amount of results the query yeilds
+    Integer amount = cursor.size();
+    double start_rank = start.getRank();
 
     connection.close();
 
-    double rank = ( ( 1 - damping_factor) / amount ) + (damping_factor * rank_sums);
-    return rank;
+    // if size = 0 then add 0 to the rank
+    return (amount > 0) ? (1 - damping_factor) + ( damping_factor * (start_rank / amount) ) : 0;
   }
 
 
@@ -98,13 +105,5 @@ public class Graph {
 
   }
 
-  // public void run() {
-  //   t = new Thread(this);
-  //   t.start();
-  // }
-
- public void start() {
-   System.out.println();
- }
 
 }

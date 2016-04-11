@@ -4,6 +4,7 @@ import java.util.Random;
 
 import org.bson.types.ObjectId;
 import com.mongodb.BasicDBObject;
+import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 import com.mongodb.WriteResult;
 
@@ -35,6 +36,7 @@ public class Node {
         this.name = result.get("name").toString();
 
       }
+      catch(IllegalArgumentException e) {}
       catch(Exception e) {
         e.printStackTrace();
       }
@@ -45,10 +47,37 @@ public class Node {
   }
 
   public Node(String url) {
-    this.rank = 1D;
-    setUrl(url);
-    this.name  = "";
-    this.save();
+
+    Connection connection = new Connection( "nodes" );
+    try {
+      BasicDBObject search = new BasicDBObject("url", url );
+      DBObject result = connection.col.findOne(search);
+
+      try {
+        this.id = result.get("_id").toString();
+        setUrl(url);
+        this.rank = Double.parseDouble( result.get("rank").toString() );
+        this.name = result.get("name").toString();
+
+      }
+      catch(NullPointerException e){
+        this.rank = 1D;
+        setUrl(url);
+        this.name  = "";
+        this.save();
+
+      }
+
+    }
+    catch(IllegalArgumentException e) {}
+    catch(Exception e) {
+      e.printStackTrace();
+    }
+    finally{
+      connection.close();
+      this.save();
+    }
+
   }
 
   // public Node() {
@@ -74,7 +103,6 @@ public class Node {
   public void save() {
 
     Connection connection = new Connection( "nodes" );
-
     BasicDBObject obj = new BasicDBObject( "name" , "" ).append("url",url).append("rank",rank);
     BasicDBObject search = new BasicDBObject("url", url);
 
@@ -100,6 +128,34 @@ public class Node {
   public double minusPoints(double points) {
     rank -= points;
     return rank;
+  }
+
+  public Integer getLeavingLinks() {
+    Integer count = 0;
+    Connection connection = new Connection( "edges" );
+    Node n = new Node(url, true);
+    BasicDBObject query = new BasicDBObject("start", n.id);
+
+    try {
+      DBCursor cursor = connection.col.find(query);
+      count = cursor.size();
+    }
+    catch(NullPointerException e) {
+      e.printStackTrace();
+    }
+    finally {
+      connection.close();
+      return count;
+    }
+  }
+
+  /**
+  * Sets new value of value
+  * @param
+  */
+  public void updateRank(double rank) {
+    this.rank += rank;
+    this.save();
   }
 
 	/**
